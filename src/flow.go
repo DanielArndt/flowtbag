@@ -28,10 +28,16 @@ import (
 const (
 	IP_TCP  = 6
 	IP_UDP  = 17
-	FLOW_TIMEOUT = 600000000
-	IDLE_THRESHOLD = 1000000
+
 	P_FORWARD = 0
 	P_BACKWARD = 1
+)
+
+const (
+	// Configurables. These should at some point be read in from a configuration
+	// file.
+	FLOW_TIMEOUT = 600000000
+	IDLE_THRESHOLD = 1000000
 )
 
 // This is how we represent each packet after it is decoded. A simple map from the
@@ -113,15 +119,15 @@ type Flow struct {
 	firstTime int64 // The time of the first packet in the flow
 	flast int64 // The time of the last packet in the forward direction
 	blast int64 // The time of the last packet in the backward direction
-	cstate tcpState
-	sstate tcpState
-	hasData bool
-	pdir int8
-	srcip string
-	srcport uint16
-	dstip string
-	dstport uint16
-	proto uint8
+	cstate tcpState // Connection state of the client
+	sstate tcpState // Connection state of the server
+	hasData bool // Whether the connection has had any data transmitted.
+	pdir int8 // Direction of the current packet
+	srcip string // IP address of the source (client)
+	srcport uint16 // Port number of the source connection
+	dstip string // IP address of the destination (server)
+	dstport uint16 // Port number of the destionation connection.
+	proto uint8 // The IP protocol being used for the connection.
 }
 
 func (f *Flow) Init(srcip string, 
