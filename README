@@ -25,9 +25,45 @@
 
 3. Requirements-----------------------------------------------------------------
 
-   Currently, Flowtbag requires only that you have a system with libpcap.
+   To run the executable, you will need libpcap installed. On a debian based
+   system, the following command will install the appropriate library:
 
-4. Usage------------------------------------------------------------------------
+      apt-get install libpcap
+
+   Other distributions will likely have a similar package name.
+
+   To compile from source, you'll need a Go compiler, libpcap headers, and
+   gopcap.
+
+   Go compiler:
+
+      Please see http://golang.org/doc/install.html
+
+   libpcap headers:
+
+      On a debian based system, you can execute the following command:
+
+         apt-get install libpcap-dev
+
+      Other distributions will likely have a similar package name. It is
+	  important that if you are compiling the program from source, you install
+	  the developement headers.
+
+   gopcap:
+
+      To install gopcap, you can use goinstall. The following code should be
+	  sufficient if you have Go installed correctly:
+
+         goinstall github.com/akrennmair/gopcap
+
+4. Compilation------------------------------------------------------------------
+
+   If all the dependancies are properly installed, it should be sufficient to 
+   execute the Makefile:
+
+      make
+
+5. Usage------------------------------------------------------------------------
 
    The program's usage is currently left undocumented due to the rapidly
    changing functionality of the program in its early stages. However, if you
@@ -36,7 +72,7 @@
 
       $ ./flowtbag test.cap > test.out
 
-4. Output-----------------------------------------------------------------------
+6. Output-----------------------------------------------------------------------
 
    Flowtbag currently has two seperate channels for output. To stdout, a stream
    of comma seperated values is output. Line by line, these represent the flows
@@ -47,7 +83,7 @@
    output is likely to change in future versions of Flowtbag when a better
    system is designed.
 
-4.1 Features--------------------------------------------------------------------
+6.1 Features--------------------------------------------------------------------
 
    srcip STRING
    srcport NUMERIC
