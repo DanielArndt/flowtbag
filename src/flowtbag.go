@@ -38,7 +38,7 @@ const (
 		" You may obtain a copy of the License at\n" +
 		"\n    http://www.apache.org/licenses/LICENSE-2.0\n" +
 		"\nFor more information, please visit: \n" +
-		"http://web.cs.dal.ca/~darndt"
+		"http://web.cs.dal.ca/~darndt/projects/flowtbag"
 )
 
 func sortIP(ip1 string, port1 uint16, ip2 string, port2 uint16) string {
