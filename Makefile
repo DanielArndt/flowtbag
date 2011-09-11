@@ -1,6 +1,6 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=flowtbag2
+TARG=flowtbag
 GOFILES=\
 	src/flowtbag.go\
 	src/flow.go\

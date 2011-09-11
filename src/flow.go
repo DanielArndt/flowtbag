@@ -113,8 +113,8 @@ type Flow struct {
 	firstTime int64 // The time of the first packet in the flow
 	flast int64 // The time of the last packet in the forward direction
 	blast int64 // The time of the last packet in the backward direction
-	cstate *tcpState
-	sstate *tcpState
+	cstate tcpState
+	sstate tcpState
 	hasData bool
 	pdir int8
 	srcip string
@@ -161,9 +161,7 @@ func (f *Flow) Init(srcip string,
     f.c["active_start"] = f.firstTime
 	if f.proto == IP_TCP {
 		// TCP specific code:
-		f.cstate = new(tcpState)
 		f.cstate.State = TCP_STATE_START
-		f.sstate = new(tcpState)
 		f.sstate.State = TCP_STATE_START
 		if (tcpSet(pkt["flags"], TCP_PSH)) {
 			f.f["fpsh_cnt"] = 1
