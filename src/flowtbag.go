@@ -22,7 +22,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gopcap"
+	"github.com/akrennmair/gopcap"
 	"log"
 	"os"
 	"runtime"
@@ -79,9 +79,7 @@ var (
 func init() {
 	displayWelcome()
 	flag.Int64Var(&reportInterval, "r", 500000,
-			"The interval at which to report the current state of the Flowtbag")
-//	flag.Int64Var(&cleanupInterval, "c", 500000,
-//			"The interval at which to cleanup idle flows from the Flowtbag")
+			"The interval at which to report the current state of Flowtbag")
 	flag.Parse()
 	fileName = flag.Arg(0)
 	if fileName == "" {
@@ -106,8 +104,8 @@ func main() {
 	
 	log.Println("Starting Flowtbag")
 	startTime = time.Nanoseconds()
-	for pkt := p.Next(); pkt != nil; pkt = p.Next() {
-		process(pkt)
+	for rawpkt := p.Next(); rawpkt != nil; rawpkt = p.Next() {
+		process(rawpkt)
 	}
 	for _, flow := range(activeFlows) {
 		flow.Export()
@@ -120,7 +118,7 @@ var (
 	startTime   int64
 	endTime     int64
 	elapsed     float64
-	activeFlows map[string]*Flow = make(map[string]*Flow, 200000)
+	activeFlows map[string]*Flow = make(map[string]*Flow)
 )
 
 /* This should probably be more informative and actually do something. But for
