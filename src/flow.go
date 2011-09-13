@@ -22,7 +22,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 )
 
 const (
@@ -105,14 +104,10 @@ var counters []string = []string {
     "idle_count",
 }
 
-func stddev(sqsum int64, sum int64, count int64) int64 {
-	return int64(math.Sqrt(float64(
-		(sqsum - (sum * sum) / count) / (count - 1))))
-}
-
 type Flow struct {
 	f map [string] int64
 	c map [string] int64
+
 	id int64 // An identification number for the flow
 	firstPacket packet // The first packet in the flow
 	valid bool // Is the flow a valid, exportable flow or not?
@@ -177,6 +172,7 @@ func (f *Flow) Init(srcip string,
 		}
 	}
 	f.f["total_fhlen"] = pkt["iphlen"] + pkt["prhlen"]
+
 	f.hasData = false
 	f.pdir = P_FORWARD
 	f.updateStatus(pkt)

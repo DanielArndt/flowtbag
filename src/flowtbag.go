@@ -55,8 +55,8 @@ func displayWelcome() {
 }
 
 func usage() {
-	log.Printf("%s [options] <capture file>\n", os.Args[0])
-	log.Println("options:")
+	fmt.Fprintf(os.Stderr, "%s [options] <capture file>\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "options:\n")
 	flag.PrintDefaults()
 }
 
@@ -77,18 +77,19 @@ var (
 	reportInterval  int64
 )
 func init() {
-	displayWelcome()
 	flag.Int64Var(&reportInterval, "r", 500000,
 			"The interval at which to report the current state of Flowtbag")
 	flag.Parse()
 	fileName = flag.Arg(0)
 	if fileName == "" {
 		usage()
+		fmt.Println()
 		log.Fatalln("Missing required filename.")
 	}
 }
 
 func main() {
+	displayWelcome()
 	// This will be our capture file
 	var (
 		p *pcap.Pcap
@@ -183,6 +184,7 @@ func process(raw *pcap.Packet) {
 	if exists {
 		return_val := flow.Add(pkt, srcip)
 		if return_val == 0 {
+			// The flow was successfully added
 			return
 		} else if return_val == 1 {
 			flow.Export()
