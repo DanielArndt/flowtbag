@@ -52,9 +52,9 @@ type BinFeature struct {
 	bins vector.IntVector // The actual values of each bin.
 }
 
-func (f *BinFeature) Init(min int64, max int64, num_bins int) {
+func (f *BinFeature) Init(min int, max int, num_bins int) {
 	f.num_bins = num_bins - 1
-	diff := int(max - min)
+	diff := max - min
 	f.bin_sep = diff / f.num_bins
 	f.bins = make(vector.IntVector, num_bins)
 	for i:=0; i<num_bins; i++ {
@@ -67,12 +67,14 @@ func (f *BinFeature) Add(val int64) {
 	f.bins[bin] += 1
 }
 
-func (f *BinFeature) Export() {
+func (f *BinFeature) Export() string {
 	ret := ""
 	for i:=0; i<len(f.bins);i++ {
-		if i != 0 { fmt.Sprint(",") }
+		if i > 0 { ret += fmt.Sprintf(",") }
 		ret += fmt.Sprintf("%d", f.bins[i])
 	}
+//	ret += "]"
+	return ret
 }
 
 type DistFeature struct {

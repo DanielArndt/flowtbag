@@ -107,6 +107,7 @@ var counters []string = []string {
 type Flow struct {
 	f map [string] int64
 	c map [string] int64
+	bins map [string] Feature
 
 	id int64 // An identification number for the flow
 	firstPacket packet // The first packet in the flow
@@ -173,6 +174,22 @@ func (f *Flow) Init(srcip string,
 	}
 	f.f["total_fhlen"] = pkt["iphlen"] + pkt["prhlen"]
 
+	f.bins = make(map [string] Feature)
+	var binFeat *BinFeature
+	binFeat = new(BinFeature)
+	binFeat.Init(0, 250, 5)
+	binFeat.Add(length)
+	f.bins["fpktl"] = binFeat
+	binFeat = new(BinFeature)
+	binFeat.Init(0, 250, 5)
+	f.bins["bpktl"] = binFeat
+	binFeat = new(BinFeature)
+	binFeat.Init(0, 500000, 5)
+	f.bins["fiat"] = binFeat
+	binFeat = new(BinFeature)
+	binFeat.Init(0, 500000, 5)
+	f.bins["biat"] = binFeat
+
 	f.hasData = false
 	f.pdir = P_FORWARD
 	f.updateStatus(pkt)
@@ -217,7 +234,7 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 	last := f.getLastTime()
 	diff := now - last
 	if diff > FLOW_TIMEOUT {
-		fmt.Printf("diff: %d now: %d last %d\n", diff, now, last)
+		log.Printf("diff: %d now: %d last %d\n", diff, now, last)
 		return 2
 	}
 	if now < last {
@@ -226,10 +243,6 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 	}
 	length := pkt["len"]
 	hlen := pkt["iphlen"] + pkt["prhlen"]
-//	log.Printf("hlen: %d\n iphlen: %d prhlen: %d", 
-//		hlen, 
-//		pkt["iphlen"], 
-//		pkt["prhlen"])
 	if (now < f.firstTime) {
 		log.Fatalf("Current packet is before start of flow. %d < %d\n", 
 			now, 
@@ -294,6 +307,7 @@ func (f *Flow) Add(pkt packet, srcip string) int {
             f.c["fiat_sum"] += diff
             f.c["fiat_sqsum"] += (diff * diff)
             f.c["fiat_count"]++
+			f.bins["fiat"].Add(diff)
 		}
         if f.proto == IP_TCP {
 			// Packet is using TCP protocol
@@ -305,8 +319,10 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 			}
 			// Update the last forward packet time stamp
 		}
+		f.bins["fpktl"].Add(length)
 		f.flast = now
 	} else {
+
 		// Packet is travelling in the backward direction, check if dscp is
         // set in this direction
         if f.blast == 0 && f.f["dscp"] == 0 {
@@ -338,6 +354,7 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 			f.c["biat_sum"] += diff
 			f.c["biat_sqsum"] += (diff * diff)
 			f.c["biat_count"]++
+			f.bins["biat"].Add(diff)
 		}
 		if f.proto == IP_TCP {
             // Packet is using TCP protocol
@@ -348,6 +365,7 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 				f.f["burg_cnt"]++
 			}
 		}
+		f.bins["bpktl"].Add(length)
 		// Update the last backward packet time stamp
 		f.blast = now
 	}
@@ -365,12 +383,6 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 
 func (f *Flow) Export() {
 	if !f.valid { return }
-	fmt.Printf("%s,%d,%s,%d,%d", 
-		f.srcip, 
-		f.srcport, 
-		f.dstip, 
-		f.dstport, 
-		f.proto)
 
 	// -----------------------------------
 	// First, lets consider the last active time in the calculations in case
@@ -390,6 +402,10 @@ func (f *Flow) Export() {
 	if (f.f["total_fpackets"] <= 0) {
 		log.Fatalf("total_fpackets (%d) <= 0\n", f.f["total_fpackets"])
 	}
+
+	// ---------------------------------
+	// Update Flow stats which require counters or other final calculations
+	// ---------------------------------
 	f.f["mean_fpktl"] = f.f["total_fvolume"] / f.f["total_fpackets"]
 	//Standard deviation of packets in the forward direction
 	if f.f["total_fpackets"] > 1 {
@@ -483,13 +499,19 @@ func (f *Flow) Export() {
 		log.Fatalf("duration (%d) < 0", f.f["duration"])
 	}
 	
-	// ---------------------------------
-	// Update Flow stats which require counters or other final calculations
-	// ---------------------------------
-	
+	fmt.Printf("%s,%d,%s,%d,%d", 
+		f.srcip, 
+		f.srcport, 
+		f.dstip, 
+		f.dstport, 
+		f.proto)	
 	for i:=0; i < len(features); i++ {
 		fmt.Printf(",%d", f.f[features[i]])
 	}
+	fmt.Printf(",%s", f.bins["fpktl"].Export())
+	fmt.Printf(",%s", f.bins["bpktl"].Export())
+	fmt.Printf(",%s", f.bins["fiat"].Export())
+	fmt.Printf(",%s", f.bins["biat"].Export())
 	fmt.Println()
 }
 
