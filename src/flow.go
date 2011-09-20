@@ -107,7 +107,6 @@ var counters []string = []string {
 type Flow struct {
 	f map [string] int64
 	c map [string] int64
-	bins map [string] Feature
 
 	id int64 // An identification number for the flow
 	firstPacket packet // The first packet in the flow
@@ -173,22 +172,6 @@ func (f *Flow) Init(srcip string,
 		}
 	}
 	f.f["total_fhlen"] = pkt["iphlen"] + pkt["prhlen"]
-
-	f.bins = make(map [string] Feature)
-	var binFeat *BinFeature
-	binFeat = new(BinFeature)
-	binFeat.Init(0, 250, 5)
-	binFeat.Add(length)
-	f.bins["fpktl"] = binFeat
-	binFeat = new(BinFeature)
-	binFeat.Init(0, 250, 5)
-	f.bins["bpktl"] = binFeat
-	binFeat = new(BinFeature)
-	binFeat.Init(0, 500000, 5)
-	f.bins["fiat"] = binFeat
-	binFeat = new(BinFeature)
-	binFeat.Init(0, 500000, 5)
-	f.bins["biat"] = binFeat
 
 	f.hasData = false
 	f.pdir = P_FORWARD
@@ -307,7 +290,6 @@ func (f *Flow) Add(pkt packet, srcip string) int {
             f.c["fiat_sum"] += diff
             f.c["fiat_sqsum"] += (diff * diff)
             f.c["fiat_count"]++
-			f.bins["fiat"].Add(diff)
 		}
         if f.proto == IP_TCP {
 			// Packet is using TCP protocol
@@ -319,7 +301,6 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 			}
 			// Update the last forward packet time stamp
 		}
-		f.bins["fpktl"].Add(length)
 		f.flast = now
 	} else {
 
@@ -354,7 +335,6 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 			f.c["biat_sum"] += diff
 			f.c["biat_sqsum"] += (diff * diff)
 			f.c["biat_count"]++
-			f.bins["biat"].Add(diff)
 		}
 		if f.proto == IP_TCP {
             // Packet is using TCP protocol
@@ -365,7 +345,6 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 				f.f["burg_cnt"]++
 			}
 		}
-		f.bins["bpktl"].Add(length)
 		// Update the last backward packet time stamp
 		f.blast = now
 	}
@@ -508,10 +487,6 @@ func (f *Flow) Export() {
 	for i:=0; i < len(features); i++ {
 		fmt.Printf(",%d", f.f[features[i]])
 	}
-	fmt.Printf(",%s", f.bins["fpktl"].Export())
-	fmt.Printf(",%s", f.bins["bpktl"].Export())
-	fmt.Printf(",%s", f.bins["fiat"].Export())
-	fmt.Printf(",%s", f.bins["biat"].Export())
 	fmt.Println()
 }
 
