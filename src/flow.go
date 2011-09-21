@@ -217,7 +217,6 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 	last := f.getLastTime()
 	diff := now - last
 	if diff > FLOW_TIMEOUT {
-		log.Printf("diff: %d now: %d last %d\n", diff, now, last)
 		return 2
 	}
 	if now < last {

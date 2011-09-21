@@ -130,7 +130,7 @@ func catchPanic() {
 }
 
 func process(raw *pcap.Packet) {
-
+	defer catchPanic()
 	count++
 	if (count % reportInterval) == 0 {
 		timeInt := int64(raw.Time.Sec) * 1000000 + int64(raw.Time.Usec)
