@@ -177,17 +177,17 @@ func (f *Flow) Init(srcip string,
 	f.bins = make(map [string] Feature)
 	var binFeat *BinFeature
 	binFeat = new(BinFeature)
-	binFeat.Init(0, 250, 5)
+	binFeat.Init(0, 250, 10)
 	binFeat.Add(length)
 	f.bins["fpktl"] = binFeat
 	binFeat = new(BinFeature)
-	binFeat.Init(0, 250, 5)
+	binFeat.Init(0, 250, 10)
 	f.bins["bpktl"] = binFeat
 	binFeat = new(BinFeature)
-	binFeat.Init(0, 500000, 5)
+	binFeat.Init(0, 500000, 10)
 	f.bins["fiat"] = binFeat
 	binFeat = new(BinFeature)
-	binFeat.Init(0, 500000, 5)
+	binFeat.Init(0, 500000, 10)
 	f.bins["biat"] = binFeat
 
 	f.hasData = false
@@ -504,13 +504,14 @@ func (f *Flow) Export() {
 		f.dstip, 
 		f.dstport, 
 		f.proto)	
-	for i:=0; i < len(features); i++ {
+	for i:=0; i < len(features) - 1; i++ {
 		fmt.Printf(",%d", f.f[features[i]])
 	}
 	fmt.Printf(",%s", f.bins["fpktl"].Export())
 	fmt.Printf(",%s", f.bins["bpktl"].Export())
 	fmt.Printf(",%s", f.bins["fiat"].Export())
 	fmt.Printf(",%s", f.bins["biat"].Export())
+	fmt.Printf(",%d", f.f[features[len(features)-1]])
 	fmt.Println()
 }
 
