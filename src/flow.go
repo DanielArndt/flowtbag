@@ -164,10 +164,10 @@ func (f *Flow) Init(srcip string,
 		// TCP specific code:
 		f.cstate.State = TCP_STATE_START
 		f.sstate.State = TCP_STATE_START
-		if (tcpSet(pkt["flags"], TCP_PSH)) {
+		if (tcpSet(TCP_PSH, pkt["flags"])) {
 			f.f["fpsh_cnt"] = 1
 		}
-        if (tcpSet(pkt["flags"], TCP_URG)) {
+        if (tcpSet(TCP_URG, pkt["flags"])) {
 			f.f["furg_cnt"] = 1
 		}
 	}
@@ -292,10 +292,10 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 		}
         if f.proto == IP_TCP {
 			// Packet is using TCP protocol
-            if (tcpSet(pkt["flags"], TCP_PSH)) {
+            if (tcpSet(TCP_PSH, pkt["flags"])) {
 				f.f["fpsh_cnt"]++
 			}
-			if (tcpSet(pkt["flags"], TCP_URG)) {
+			if (tcpSet(TCP_URG, pkt["flags"])) {
                 f.f["furg_cnt"]++
 			}
 			// Update the last forward packet time stamp
@@ -337,10 +337,10 @@ func (f *Flow) Add(pkt packet, srcip string) int {
 		}
 		if f.proto == IP_TCP {
             // Packet is using TCP protocol
-			if (tcpSet(pkt["flags"], TCP_PSH)) {
+			if (tcpSet(TCP_PSH, pkt["flags"])) {
 				f.f["bpsh_cnt"]++
 			}
-			if (tcpSet(pkt["flags"], TCP_URG)) {
+			if (tcpSet(TCP_URG, pkt["flags"])) {
 				f.f["burg_cnt"]++
 			}
 		}
