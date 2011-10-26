@@ -115,7 +115,7 @@ func main() {
 }
 
 var (
-        count       int64   = 0
+        pCount       int64   = 0
         flowCount   int64   = 0
         startTime   int64
         endTime     int64
@@ -132,8 +132,8 @@ func catchPanic() {
 
 func process(raw *pcap.Packet) {
         defer catchPanic()
-        count++
-        if (count % reportInterval) == 0 {
+        pCount++
+        if (pCount % reportInterval) == 0 {
                 timeInt := int64(raw.Time.Sec)*1000000 + int64(raw.Time.Usec)
                 endTime = time.Nanoseconds()
                 cleanupActive(timeInt)
@@ -141,7 +141,7 @@ func process(raw *pcap.Packet) {
                 elapsed = float64(endTime-startTime) / 1000000000
                 startTime = time.Nanoseconds()
                 log.Printf("Currently processing packet %d. Flowtbag size: %d",
-                        count, len(activeFlows))
+                        pCount, len(activeFlows))
                 log.Printf("Took %fs to process %d packets", elapsed, reportInterval)
         }
         raw.Decode()
@@ -158,7 +158,7 @@ func process(raw *pcap.Packet) {
                 dstport uint16
                 proto   uint8
         )
-        pkt["num"] = count
+        pkt["num"] = pCount
         pkt["iphlen"] = int64(iph.Ihl * 4)
         pkt["dscp"] = int64(iph.Tos >> 2)
         pkt["len"] = int64(iph.Length)
