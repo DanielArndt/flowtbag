@@ -44,6 +44,9 @@ const (
 type packet map[string]int64
 
 var features []string = []string{
+        // To add new features, add the name here, then inititialize the
+        // value in init(), and calculate it in add(). You can finalize it
+        // in Export()
         "total_fpackets",
         "total_fvolume",
         "total_bpackets",
@@ -105,12 +108,10 @@ var counters []string = []string{
 }
 
 type Flow struct {
-        f       map[string]int64
-        c       map[string]int64
-        bins    map[string]Feature
+        f       map[string]int64 // A map of the features to be exported
+        c       map[string]int64 // A map of counters used for calculations
+        bins    map[string]Feature // A map of binning features
 
-        id          int64    // An identification number for the flow
-        firstPacket packet   // The first packet in the flow
         valid       bool     // Is the flow a valid, exportable flow or not?
         firstTime   int64    // The time of the first packet in the flow
         flast       int64    // The time of the last packet in the forward direction
@@ -135,8 +136,6 @@ func (f *Flow) Init(srcip string,
         id int64) {
         f.f = make(map[string]int64, 44)
         f.c = make(map[string]int64, 15)
-        f.id = id
-        f.firstPacket = pkt
         f.valid = false
         for i := 0; i < len(features); i++ {
                 f.f[features[i]] = 0
@@ -184,10 +183,10 @@ func (f *Flow) Init(srcip string,
         binFeat.Init(0, 250, 10)
         f.bins["bpktl"] = binFeat
         binFeat = new(BinFeature)
-        binFeat.Init(0, 500000, 10)
+        binFeat.Init(0, 200000, 10)
         f.bins["fiat"] = binFeat
         binFeat = new(BinFeature)
-        binFeat.Init(0, 500000, 10)
+        binFeat.Init(0, 200000, 10)
         f.bins["biat"] = binFeat
 
         f.hasData = false
@@ -289,6 +288,9 @@ func (f *Flow) Add(pkt packet, srcip string) int {
                 f.c["active_start"] = now
         }
         if f.pdir == P_FORWARD {
+                if f.f["dscp"] == 0 {
+                        f.f["dscp"] = pkt["dscp"]
+                }
                 // Packet is travelling in the forward direction
                 // Calculate some statistics
                 // Packet length
@@ -329,12 +331,8 @@ func (f *Flow) Add(pkt packet, srcip string) int {
                 f.bins["fpktl"].Add(length)
                 f.flast = now
         } else {
-
-                // Packet is travelling in the backward direction, check if dscp is
-                // set in this direction
-                if f.blast == 0 && f.f["dscp"] == 0 {
-                        // Check only first packet in backward dir, and make sure it has
-                        // not been set already.
+                // Packet is travelling in the backward direction
+                if f.f["dscp"] == 0 {
                         f.f["dscp"] = pkt["dscp"]
                 }
                 // Calculate some statistics
