@@ -47,84 +47,84 @@ var feat map[string]int = map[string]int{
         // To add new features, add the name here, then inititialize the
         // value in init(), and calculate it in add(). You can finalize it
         // in Export()
-    "total_fpackets":0,
-        "total_fvolume":1,
-        "total_bpackets":2,
-        "total_bvolume":3,
-        "min_fpktl":4,
-        "mean_fpktl":5,
-        "max_fpktl":6,
-        "std_fpktl":7,
-        "min_bpktl":8,
-        "mean_bpktl":9,
-        "max_bpktl":10,
-        "std_bpktl":11,
-        "min_fiat":12,
-        "mean_fiat":13,
-        "max_fiat":14,
-        "std_fiat":15,
-        "min_biat":16,
-        "mean_biat":17,
-        "max_biat":18,
-        "std_biat":19,
-        "duration":20,
-        "min_active":21,
-        "mean_active":22,
-        "max_active":23,
-        "std_active":24,
-        "min_idle":25,
-        "mean_idle":26,
-        "max_idle":27,
-        "std_idle":28,
-        "sflow_fpackets":29,
-        "sflow_fbytes":30,
-        "sflow_bpackets":31,
-        "sflow_bbytes":32,
-        "fpsh_cnt":33,
-        "bpsh_cnt":34,
-        "furg_cnt":35,
-        "burg_cnt":36,
-        "total_fhlen":37,
-        "total_bhlen":38,
-        "dscp":39,
+        "total_fpackets": 0,
+        "total_fvolume":  1,
+        "total_bpackets": 2,
+        "total_bvolume":  3,
+        "min_fpktl":      4,
+        "mean_fpktl":     5,
+        "max_fpktl":      6,
+        "std_fpktl":      7,
+        "min_bpktl":      8,
+        "mean_bpktl":     9,
+        "max_bpktl":      10,
+        "std_bpktl":      11,
+        "min_fiat":       12,
+        "mean_fiat":      13,
+        "max_fiat":       14,
+        "std_fiat":       15,
+        "min_biat":       16,
+        "mean_biat":      17,
+        "max_biat":       18,
+        "std_biat":       19,
+        "duration":       20,
+        "min_active":     21,
+        "mean_active":    22,
+        "max_active":     23,
+        "std_active":     24,
+        "min_idle":       25,
+        "mean_idle":      26,
+        "max_idle":       27,
+        "std_idle":       28,
+        "sflow_fpackets": 29,
+        "sflow_fbytes":   30,
+        "sflow_bpackets": 31,
+        "sflow_bbytes":   32,
+        "fpsh_cnt":       33,
+        "bpsh_cnt":       34,
+        "furg_cnt":       35,
+        "burg_cnt":       36,
+        "total_fhlen":    37,
+        "total_bhlen":    38,
+        "dscp":           39,
 }
 
 var count map[string]int = map[string]int{
-    "fpktl_sqsum":0,
-        "bpktl_sqsum":1,
-        "fiat_sum":2,
-        "fiat_sqsum":3,
-        "fiat_count":4,
-        "biat_sum":5,
-        "biat_sqsum":6,
-        "biat_count":7,
-        "active_start":8,
-        "active_time":9,
-        "active_sqsum":10,
-        "active_count":11,
-        "idle_time":12,
-        "idle_sqsum":13,
-        "idle_count":14,
+        "fpktl_sqsum":  0,
+        "bpktl_sqsum":  1,
+        "fiat_sum":     2,
+        "fiat_sqsum":   3,
+        "fiat_count":   4,
+        "biat_sum":     5,
+        "biat_sqsum":   6,
+        "biat_count":   7,
+        "active_start": 8,
+        "active_time":  9,
+        "active_sqsum": 10,
+        "active_count": 11,
+        "idle_time":    12,
+        "idle_sqsum":   13,
+        "idle_count":   14,
 }
 
 type Flow struct {
-        f       []int64 // A map of the features to be exported
-        c       []int64 // A map of counters used for calculations
+        f       []int64            // A map of the features to be exported
+        c       []int64            // A map of counters used for calculations
         bins    map[string]Feature // A map of binning features
 
-        valid       bool     // Is the flow a valid, exportable flow or not?
-        firstTime   int64    // The time of the first packet in the flow
-        flast       int64    // The time of the last packet in the forward direction
-        blast       int64    // The time of the last packet in the backward direction
-        cstate      tcpState // Connection state of the client
-        sstate      tcpState // Connection state of the server
-        hasData     bool     // Whether the connection has had any data transmitted.
-        pdir        int8     // Direction of the current packet
-        srcip       string   // IP address of the source (client)
-        srcport     uint16   // Port number of the source connection
-        dstip       string   // IP address of the destination (server)
-        dstport     uint16   // Port number of the destionation connection.
-        proto       uint8    // The IP protocol being used for the connection.
+        valid     bool     // Is the flow a valid, exportable flow or not?
+        firstTime int64    // The time of the first packet in the flow
+        flast     int64    // The time of the last packet in the forward direction
+        blast     int64    // The time of the last packet in the backward direction
+        cstate    tcpState // Connection state of the client
+        sstate    tcpState // Connection state of the server
+        hasData   bool     // Whether the connection has had any data transmitted.
+        pdir      int8     // Direction of the current packet
+        srcip     string   // IP address of the source (client)
+        srcport   uint16   // Port number of the source connection
+        dstip     string   // IP address of the destination (server)
+        dstport   uint16   // Port number of the destionation connection.
+        proto     uint8    // The IP protocol being used for the connection.
 }
 
 func (f *Flow) Init(srcip string,
@@ -134,7 +134,7 @@ func (f *Flow) Init(srcip string,
         proto uint8,
         pkt packet,
         id int64) {
-    f.f = make([]int64, len(feat))
+        f.f = make([]int64, len(feat))
         f.c = make([]int64, len(count))
         f.valid = false
         for i := 0; i < len(feat); i++ {

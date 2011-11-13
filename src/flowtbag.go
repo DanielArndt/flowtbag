@@ -115,7 +115,7 @@ func main() {
 }
 
 var (
-        pCount       int64   = 0
+        pCount      int64   = 0
         flowCount   int64   = 0
         startTime   int64
         endTime     int64
