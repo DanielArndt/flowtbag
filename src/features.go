@@ -45,8 +45,9 @@ func MinInt(i1 int, i2 int) int {
 }
 
 type Feature interface {
-    Add(val int64)
+    Add(int64)
     Export() string
+    Set(int64)
 }
 
 type BinFeature struct {
@@ -83,6 +84,12 @@ func (f *BinFeature) Export() string {
     return ret
 }
 
+func (f *BinFeature) Set(val int64) {
+    for i := 0; i < len(f.bins); i++ {
+        f.bins[i] = int(val)
+    }
+}
+
 type DistFeature struct {
     sum   int64
     sumsq int64
@@ -92,11 +99,7 @@ type DistFeature struct {
 }
 
 func (f *DistFeature) Init(val int64) {
-    f.sum = val
-    f.sumsq = val * val
-    f.count = 1
-    f.min = val
-    f.max = val
+    f.Set(val)
 }
 
 func (f *DistFeature) Add(val int64) {
@@ -116,12 +119,21 @@ func (f *DistFeature) Export() string {
         stddev(f.sumsq, f.sum, f.count))
 }
 
+// Set the DistFeature to include val as the single value in the Feature.
+func (f *DistFeature) Set(val int64) {
+    f.sum = val
+    f.sumsq = val * val
+    f.count = 1
+    f.min = val
+    f.max = val
+}
+
 type ValueFeature struct {
     value int64
 }
 
 func (f *ValueFeature) Init(val int64) {
-    f.value = val
+    f.Set(val)
 }
 
 func (f *ValueFeature) Add(val int64) {
@@ -130,4 +142,8 @@ func (f *ValueFeature) Add(val int64) {
 
 func (f *ValueFeature) Export() string {
     return string(f.value)
+}
+
+func (f *ValueFeature) Set(val int64) {
+    f.value = val
 }
