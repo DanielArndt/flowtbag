@@ -43,69 +43,71 @@ const (
 // string value for it's name to the value
 type packet map[string]int64
 
-var feat map[string]int = map[string]int{
+const ( 
     // To add new features, add the name here, then inititialize the
     // value in init(), and calculate it in add(). You can finalize it
     // in Export()
-    "total_fpackets": 0,
-    "total_fvolume":  1,
-    "total_bpackets": 2,
-    "total_bvolume":  3,
-    "min_fpktl":      4,
-    "mean_fpktl":     5,
-    "max_fpktl":      6,
-    "std_fpktl":      7,
-    "min_bpktl":      8,
-    "mean_bpktl":     9,
-    "max_bpktl":      10,
-    "std_bpktl":      11,
-    "min_fiat":       12,
-    "mean_fiat":      13,
-    "max_fiat":       14,
-    "std_fiat":       15,
-    "min_biat":       16,
-    "mean_biat":      17,
-    "max_biat":       18,
-    "std_biat":       19,
-    "duration":       20,
-    "min_active":     21,
-    "mean_active":    22,
-    "max_active":     23,
-    "std_active":     24,
-    "min_idle":       25,
-    "mean_idle":      26,
-    "max_idle":       27,
-    "std_idle":       28,
-    "sflow_fpackets": 29,
-    "sflow_fbytes":   30,
-    "sflow_bpackets": 31,
-    "sflow_bbytes":   32,
-    "fpsh_cnt":       33,
-    "bpsh_cnt":       34,
-    "furg_cnt":       35,
-    "burg_cnt":       36,
-    "total_fhlen":    37,
-    "total_bhlen":    38,
-    "dscp":           39,
-}
+    TOTAL_FPACKETS = iota
+    TOTAL_FVOLUME
+    TOTAL_BPACKETS
+    TOTAL_BVOLUME
+    MIN_FPKTL
+    MEAN_FPKTL
+    MAX_FPKTL
+    STD_FPKTL
+    MIN_BPKTL
+    MEAN_BPKTL
+    MAX_BPKTL
+    STD_BPKTL
+    MIN_FIAT
+    MEAN_FIAT
+    MAX_FIAT
+    STD_FIAT
+    MIN_BIAT
+    MEAN_BIAT
+    MAX_BIAT
+    STD_BIAT
+    DURATION
+    MIN_ACTIVE
+    MEAN_ACTIVE
+    MAX_ACTIVE
+    STD_ACTIVE
+    MIN_IDLE
+    MEAN_IDLE
+    MAX_IDLE
+    STD_IDLE
+    SFLOW_FPACKETS
+    SFLOW_FBYTES
+    SFLOW_BPACKETS
+    SFLOW_BBYTES
+    FPSH_CNT
+    BPSH_CNT
+    FURG_CNT
+    BURG_CNT
+    TOTAL_FHLEN
+    TOTAL_BHLEN
+    DSCP
+    NUM_FEATURES
+)
 
-var count map[string]int = map[string]int{
-    "fpktl_sqsum":  0,
-    "bpktl_sqsum":  1,
-    "fiat_sum":     2,
-    "fiat_sqsum":   3,
-    "fiat_count":   4,
-    "biat_sum":     5,
-    "biat_sqsum":   6,
-    "biat_count":   7,
-    "active_start": 8,
-    "active_time":  9,
-    "active_sqsum": 10,
-    "active_count": 11,
-    "idle_time":    12,
-    "idle_sqsum":   13,
-    "idle_count":   14,
-}
+const (
+    FPKTL_SQSUM = iota
+    BPKTL_SQSUM
+    FIAT_SUM
+    FIAT_SQSUM
+    FIAT_COUNT
+    BIAT_SUM
+    BIAT_SQSUM
+    BIAT_COUNT
+    ACTIVE_START
+    ACTIVE_TIME
+    ACTIVE_SQSUM
+    ACTIVE_COUNT
+    IDLE_TIME
+    IDLE_SQSUM
+    IDLE_COUNT
+    NUM_COUNTERS
+)
 
 type Flow struct {
     f    []int64            // A map of the features to be exported
@@ -134,13 +136,13 @@ func (f *Flow) Init(srcip string,
     proto uint8,
     pkt packet,
     id int64) {
-    f.f = make([]int64, len(feat))
-    f.c = make([]int64, len(count))
+    f.f = make([]int64, NUM_FEATURES)
+    f.c = make([]int64, NUM_COUNTERS)
     f.valid = false
-    for i := 0; i < len(feat); i++ {
+    for i := 0; i < NUM_FEATURES; i++ {
         f.f[i] = 0
     }
-    for i := 0; i < len(count); i++ {
+    for i := 0; i < NUM_COUNTERS; i++ {
         f.c[i] = 0
     }
     // Basic flow identification criteria
@@ -149,29 +151,29 @@ func (f *Flow) Init(srcip string,
     f.dstip = dstip
     f.dstport = dstport
     f.proto = proto
-    f.f[feat["dscp"]] = pkt["dscp"]
+    f.f[DSCP] = pkt["dscp"]
     // ---------------------------------------------------------
-    f.f[feat["total_fpackets"]] = 1
+    f.f[TOTAL_FPACKETS] = 1
     length := pkt["len"]
-    f.f[feat["total_fvolume"]] = length
-    f.f[feat["min_fpktl"]] = length
-    f.f[feat["max_fpktl"]] = length
-    f.c[count["fpktl_sqsum"]] = (length * length)
+    f.f[TOTAL_FVOLUME] = length
+    f.f[MIN_FPKTL] = length
+    f.f[MAX_FPKTL] = length
+    f.c[FPKTL_SQSUM] = (length * length)
     f.firstTime = pkt["time"]
     f.flast = f.firstTime
-    f.c[count["active_start"]] = f.firstTime
+    f.c[ACTIVE_START] = f.firstTime
     if f.proto == IP_TCP {
         // TCP specific code:
         f.cstate.State = TCP_STATE_START
         f.sstate.State = TCP_STATE_START
         if tcpSet(TCP_PSH, pkt["flags"]) {
-            f.f[feat["fpsh_cnt"]] = 1
+            f.f[FPSH_CNT] = 1
         }
         if tcpSet(TCP_URG, pkt["flags"]) {
-            f.f[feat["furg_cnt"]] = 1
+            f.f[FURG_CNT] = 1
         }
     }
-    f.f[feat["total_fhlen"]] = pkt["iphlen"] + pkt["prhlen"]
+    f.f[TOTAL_FHLEN] = pkt["iphlen"] + pkt["prhlen"]
 
     f.bins = make(map[string]Feature)
     var binFeat *BinFeature
@@ -208,7 +210,7 @@ func (f *Flow) updateStatus(pkt packet) {
         if pkt["len"] > 8 {
             f.hasData = true
         }
-        if f.hasData && (f.f[feat["total_bpackets"]] > 0) {
+        if f.hasData && (f.f[TOTAL_BPACKETS] > 0) {
             f.valid = true
         }
     } else if f.proto == IP_TCP {
@@ -260,71 +262,71 @@ func (f *Flow) Add(pkt packet, srcip string) int {
         f.pdir = P_BACKWARD
     }
     if diff > IDLE_THRESHOLD {
-        if diff > f.f[feat["max_idle"]] {
-            f.f[feat["max_idle"]] = diff
+        if diff > f.f[MAX_IDLE] {
+            f.f[MAX_IDLE] = diff
         }
-        if (diff < f.f[feat["min_idle"]]) ||
-            (f.f[feat["min_idle"]] == 0) {
-            f.f[feat["min_idle"]] = diff
+        if (diff < f.f[MIN_IDLE]) ||
+            (f.f[MIN_IDLE] == 0) {
+            f.f[MIN_IDLE] = diff
         }
-        f.c[count["idle_time"]] += diff
-        f.c[count["idle_sqsum"]] += (diff * diff)
-        f.c[count["idle_count"]]++
+        f.c[IDLE_TIME] += diff
+        f.c[IDLE_SQSUM] += (diff * diff)
+        f.c[IDLE_COUNT]++
         // Active time stats - calculated by looking at the previous packet
         // time and the packet time for when the last idle time ended.
-        diff = last - f.c[count["active_start"]]
-        if diff > f.f[feat["max_active"]] {
-            f.f[feat["max_active"]] = diff
+        diff = last - f.c[ACTIVE_START]
+        if diff > f.f[MAX_ACTIVE] {
+            f.f[MAX_ACTIVE] = diff
         }
-        if (diff < f.f[feat["min_active"]]) ||
-            (f.f[feat["min_active"]] == 0) {
-            f.f[feat["min_active"]] = diff
+        if (diff < f.f[MIN_ACTIVE]) ||
+            (f.f[MIN_ACTIVE] == 0) {
+            f.f[MIN_ACTIVE] = diff
         }
-        f.c[count["active_time"]] += diff
-        f.c[count["active_sqsum"]] += (diff * diff)
-        f.c[count["active_count"]]++
+        f.c[ACTIVE_TIME] += diff
+        f.c[ACTIVE_SQSUM] += (diff * diff)
+        f.c[ACTIVE_COUNT]++
         f.flast = 0
         f.blast = 0
-        f.c[count["active_start"]] = now
+        f.c[ACTIVE_START] = now
     }
     if f.pdir == P_FORWARD {
-        if f.f[feat["dscp"]] == 0 {
-            f.f[feat["dscp"]] = pkt["dscp"]
+        if f.f[DSCP] == 0 {
+            f.f[DSCP] = pkt["dscp"]
         }
         // Packet is travelling in the forward direction
         // Calculate some statistics
         // Packet length
-        if (length < f.f[feat["min_fpktl"]]) || (f.f[feat["min_fpktl"]] == 0) {
-            f.f[feat["min_fpktl"]] = length
+        if (length < f.f[MIN_FPKTL]) || (f.f[MIN_FPKTL] == 0) {
+            f.f[MIN_FPKTL] = length
         }
-        if length > f.f[feat["max_fpktl"]] {
-            f.f[feat["max_fpktl"]] = length
+        if length > f.f[MAX_FPKTL] {
+            f.f[MAX_FPKTL] = length
         }
-        f.f[feat["total_fvolume"]] += length // Doubles up as c_fpktl_sum from NM
-        f.c[count["fpktl_sqsum"]] += (length * length)
-        f.f[feat["total_fpackets"]]++
-        f.f[feat["total_fhlen"]] += hlen
+        f.f[TOTAL_FVOLUME] += length // Doubles up as c_fpktl_sum from NM
+        f.c[FPKTL_SQSUM] += (length * length)
+        f.f[TOTAL_FPACKETS]++
+        f.f[TOTAL_FHLEN] += hlen
         // Interarrival time
         if f.flast > 0 {
             diff = now - f.flast
-            if (diff < f.f[feat["min_fiat"]]) || (f.f[feat["min_fiat"]] == 0) {
-                f.f[feat["min_fiat"]] = diff
+            if (diff < f.f[MIN_FIAT]) || (f.f[MIN_FIAT] == 0) {
+                f.f[MIN_FIAT] = diff
             }
-            if diff > f.f[feat["max_fiat"]] {
-                f.f[feat["max_fiat"]] = diff
+            if diff > f.f[MAX_FIAT] {
+                f.f[MAX_FIAT] = diff
             }
-            f.c[count["fiat_sum"]] += diff
-            f.c[count["fiat_sqsum"]] += (diff * diff)
-            f.c[count["fiat_count"]]++
+            f.c[FIAT_SUM] += diff
+            f.c[FIAT_SQSUM] += (diff * diff)
+            f.c[FIAT_COUNT]++
             f.bins["fiat"].Add(diff)
         }
         if f.proto == IP_TCP {
             // Packet is using TCP protocol
             if tcpSet(TCP_PSH, pkt["flags"]) {
-                f.f[feat["fpsh_cnt"]]++
+                f.f[FPSH_CNT]++
             }
             if tcpSet(TCP_URG, pkt["flags"]) {
-                f.f[feat["furg_cnt"]]++
+                f.f[FURG_CNT]++
             }
             // Update the last forward packet time stamp
         }
@@ -332,42 +334,42 @@ func (f *Flow) Add(pkt packet, srcip string) int {
         f.flast = now
     } else {
         // Packet is travelling in the backward direction
-        if f.f[feat["dscp"]] == 0 {
-            f.f[feat["dscp"]] = pkt["dscp"]
+        if f.f[DSCP] == 0 {
+            f.f[DSCP] = pkt["dscp"]
         }
         // Calculate some statistics
         // Packet length
-        if length < f.f[feat["min_bpktl"]] || f.f[feat["min_bpktl"]] == 0 {
-            f.f[feat["min_bpktl"]] = length
+        if length < f.f[MIN_BPKTL] || f.f[MIN_BPKTL] == 0 {
+            f.f[MIN_BPKTL] = length
         }
-        if length > f.f[feat["max_bpktl"]] {
-            f.f[feat["max_bpktl"]] = length
+        if length > f.f[MAX_BPKTL] {
+            f.f[MAX_BPKTL] = length
         }
-        f.f[feat["total_bvolume"]] += length // Doubles up as c_bpktl_sum from NM
-        f.c[count["bpktl_sqsum"]] += (length * length)
-        f.f[feat["total_bpackets"]]++
-        f.f[feat["total_bhlen"]] += hlen
+        f.f[TOTAL_BVOLUME] += length // Doubles up as c_bpktl_sum from NM
+        f.c[BPKTL_SQSUM] += (length * length)
+        f.f[TOTAL_BPACKETS]++
+        f.f[TOTAL_BHLEN] += hlen
         // Inter-arrival time
         if f.blast > 0 {
             diff = now - f.blast
-            if (diff < f.f[feat["min_biat"]]) || (f.f[feat["min_biat"]] == 0) {
-                f.f[feat["min_biat"]] = diff
+            if (diff < f.f[MIN_BIAT]) || (f.f[MIN_BIAT] == 0) {
+                f.f[MIN_BIAT] = diff
             }
-            if diff > f.f[feat["max_biat"]] {
-                f.f[feat["max_biat"]] = diff
+            if diff > f.f[MAX_BIAT] {
+                f.f[MAX_BIAT] = diff
             }
-            f.c[count["biat_sum"]] += diff
-            f.c[count["biat_sqsum"]] += (diff * diff)
-            f.c[count["biat_count"]]++
+            f.c[BIAT_SUM] += diff
+            f.c[BIAT_SQSUM] += (diff * diff)
+            f.c[BIAT_COUNT]++
             f.bins["biat"].Add(diff)
         }
         if f.proto == IP_TCP {
             // Packet is using TCP protocol
             if tcpSet(TCP_PSH, pkt["flags"]) {
-                f.f[feat["bpsh_cnt"]]++
+                f.f[BPSH_CNT]++
             }
             if tcpSet(TCP_URG, pkt["flags"]) {
-                f.f[feat["burg_cnt"]]++
+                f.f[BURG_CNT]++
             }
         }
         f.bins["bpktl"].Add(length)
@@ -395,115 +397,113 @@ func (f *Flow) Export() {
     // First, lets consider the last active time in the calculations in case
     // this changes something.
     // -----------------------------------
-    diff := f.getLastTime() - f.c[count["active_start"]]
-    if diff > f.f[feat["max_active"]] {
-        f.f[feat["max_active"]] = diff
+    diff := f.getLastTime() - f.c[ACTIVE_START]
+    if diff > f.f[MAX_ACTIVE] {
+        f.f[MAX_ACTIVE] = diff
     }
-    if (diff < f.f[feat["min_active"]]) || (f.f[feat["min_active"]] == 0) {
-        f.f[feat["min_active"]] = diff
+    if (diff < f.f[MIN_ACTIVE]) || (f.f[MIN_ACTIVE] == 0) {
+        f.f[MIN_ACTIVE] = diff
     }
-    f.c[count["active_time"]] += diff
-    f.c[count["active_sqsum"]] += (diff * diff)
-    f.c[count["active_count"]]++
+    f.c[ACTIVE_TIME] += diff
+    f.c[ACTIVE_SQSUM] += (diff * diff)
+    f.c[ACTIVE_COUNT]++
 
-    if f.f[feat["total_fpackets"]] <= 0 {
-        log.Fatalf("total_fpackets (%d) <= 0\n", f.f[feat["total_fpackets"]])
+    if f.f[TOTAL_FPACKETS] <= 0 {
+        log.Fatalf("total_fpackets (%d) <= 0\n", f.f[TOTAL_FPACKETS])
     }
 
     // ---------------------------------
     // Update Flow stats which require counters or other final calculations
     // ---------------------------------
-    f.f[feat["mean_fpktl"]] = f.f[feat["total_fvolume"]] / f.f[feat["total_fpackets"]]
+    f.f[MEAN_FPKTL] = f.f[TOTAL_FVOLUME] / f.f[TOTAL_FPACKETS]
     //Standard deviation of packets in the forward direction
-    if f.f[feat["total_fpackets"]] > 1 {
-        f.f[feat["std_fpktl"]] = stddev(f.c[count["fpktl_sqsum"]],
-            f.f[feat["total_fvolume"]],
-            f.f[feat["total_fpackets"]])
+    if f.f[TOTAL_FPACKETS] > 1 {
+        f.f[STD_FPKTL] = stddev(f.c[FPKTL_SQSUM], f.f[TOTAL_FVOLUME], f.f[TOTAL_FPACKETS])
     } else {
-        f.f[feat["std_fpktl"]] = 0
+        f.f[STD_FPKTL] = 0
     }
     // Mean packet length of packets in the packward direction
-    if f.f[feat["total_bpackets"]] > 0 {
-        f.f[feat["mean_bpktl"]] = f.f[feat["total_bvolume"]] / f.f[feat["total_bpackets"]]
+    if f.f[TOTAL_BPACKETS] > 0 {
+        f.f[MEAN_BPKTL] = f.f[TOTAL_BVOLUME] / f.f[TOTAL_BPACKETS]
     } else {
-        f.f[feat["mean_bpktl"]] = -1
+        f.f[MEAN_BPKTL] = -1
     }
     // Standard deviation of packets in the backward direction
-    if f.f[feat["total_bpackets"]] > 1 {
-        f.f[feat["std_bpktl"]] = stddev(f.c[count["bpktl_sqsum"]],
-            f.f[feat["total_bvolume"]],
-            f.f[feat["total_bpackets"]])
+    if f.f[TOTAL_BPACKETS] > 1 {
+        f.f[STD_BPKTL] = stddev(f.c[BPKTL_SQSUM],
+            f.f[TOTAL_BVOLUME],
+            f.f[TOTAL_BPACKETS])
     } else {
-        f.f[feat["std_bpktl"]] = 0
+        f.f[STD_BPKTL] = 0
     }
     // Mean forward inter-arrival time
     // TODO: Check if we actually need c_fiat_count ?
-    if f.c[count["fiat_count"]] > 0 {
-        f.f[feat["mean_fiat"]] = f.c[count["fiat_sum"]] / f.c[count["fiat_count"]]
+    if f.c[FIAT_COUNT] > 0 {
+        f.f[MEAN_FIAT] = f.c[FIAT_SUM] / f.c[FIAT_COUNT]
     } else {
-        f.f[feat["mean_fiat"]] = 0
+        f.f[MEAN_FIAT] = 0
     }
     // Standard deviation of forward inter-arrival times
-    if f.c[count["fiat_count"]] > 1 {
-        f.f[feat["std_fiat"]] = stddev(f.c[count["fiat_sqsum"]],
-            f.c[count["fiat_sum"]],
-            f.c[count["fiat_count"]])
+    if f.c[FIAT_COUNT] > 1 {
+        f.f[STD_FIAT] = stddev(f.c[FIAT_SQSUM],
+            f.c[FIAT_SUM],
+            f.c[FIAT_COUNT])
     } else {
-        f.f[feat["std_fiat"]] = 0
+        f.f[STD_FIAT] = 0
     }
     // Mean backward inter-arrival time
-    if f.c[count["biat_count"]] > 0 {
-        f.f[feat["mean_biat"]] = f.c[count["biat_sum"]] / f.c[count["biat_count"]]
+    if f.c[BIAT_COUNT] > 0 {
+        f.f[MEAN_BIAT] = f.c[BIAT_SUM] / f.c[BIAT_COUNT]
     } else {
-        f.f[feat["mean_biat"]] = 0
+        f.f[MEAN_BIAT] = 0
     }
     // Standard deviation of backward inter-arrival times
-    if f.c[count["biat_count"]] > 1 {
-        f.f[feat["std_biat"]] = stddev(f.c[count["biat_sqsum"]],
-            f.c[count["biat_sum"]],
-            f.c[count["biat_count"]])
+    if f.c[BIAT_COUNT] > 1 {
+        f.f[STD_BIAT] = stddev(f.c[BIAT_SQSUM],
+            f.c[BIAT_SUM],
+            f.c[BIAT_COUNT])
     } else {
-        f.f[feat["std_biat"]] = 0
+        f.f[STD_BIAT] = 0
     }
     // Mean active time of the sub-flows
-    if f.c[count["active_count"]] > 0 {
-        f.f[feat["mean_active"]] = f.c[count["active_time"]] / f.c[count["active_count"]]
+    if f.c[ACTIVE_COUNT] > 0 {
+        f.f[MEAN_ACTIVE] = f.c[ACTIVE_TIME] / f.c[ACTIVE_COUNT]
     } else {
         // There should be packets in each direction if we're exporting 
         log.Fatalln("ERR: This shouldn't happen")
     }
     // Standard deviation of active times of sub-flows
-    if f.c[count["active_count"]] > 1 {
-        f.f[feat["std_active"]] = stddev(f.c[count["active_sqsum"]],
-            f.c[count["active_time"]],
-            f.c[count["active_count"]])
+    if f.c[ACTIVE_COUNT] > 1 {
+        f.f[STD_ACTIVE] = stddev(f.c[ACTIVE_SQSUM],
+            f.c[ACTIVE_TIME],
+            f.c[ACTIVE_COUNT])
     } else {
-        f.f[feat["std_active"]] = 0
+        f.f[STD_ACTIVE] = 0
     }
     // Mean of idle times between sub-flows
-    if f.c[count["idle_count"]] > 0 {
-        f.f[feat["mean_idle"]] = f.c[count["idle_time"]] / f.c[count["idle_count"]]
+    if f.c[IDLE_COUNT] > 0 {
+        f.f[MEAN_IDLE] = f.c[IDLE_TIME] / f.c[IDLE_COUNT]
     } else {
-        f.f[feat["mean_idle"]] = 0
+        f.f[MEAN_IDLE] = 0
     }
     // Standard deviation of idle times between sub-flows
-    if f.c[count["idle_count"]] > 1 {
-        f.f[feat["std_idle"]] = stddev(f.c[count["idle_sqsum"]],
-            f.c[count["idle_time"]],
-            f.c[count["idle_count"]])
+    if f.c[IDLE_COUNT] > 1 {
+        f.f[STD_IDLE] = stddev(f.c[IDLE_SQSUM],
+            f.c[IDLE_TIME],
+            f.c[IDLE_COUNT])
     } else {
-        f.f[feat["std_idle"]] = 0
+        f.f[STD_IDLE] = 0
     }
     // More sub-flow calculations
-    if f.c[count["active_count"]] > 0 {
-        f.f[feat["sflow_fpackets"]] = f.f[feat["total_fpackets"]] / f.c[count["active_count"]]
-        f.f[feat["sflow_fbytes"]] = f.f[feat["total_fvolume"]] / f.c[count["active_count"]]
-        f.f[feat["sflow_bpackets"]] = f.f[feat["total_bpackets"]] / f.c[count["active_count"]]
-        f.f[feat["sflow_bbytes"]] = f.f[feat["total_bvolume"]] / f.c[count["active_count"]]
+    if f.c[ACTIVE_COUNT] > 0 {
+        f.f[SFLOW_FPACKETS] = f.f[TOTAL_FPACKETS] / f.c[ACTIVE_COUNT]
+        f.f[SFLOW_FBYTES] = f.f[TOTAL_FVOLUME] / f.c[ACTIVE_COUNT]
+        f.f[SFLOW_BPACKETS] = f.f[TOTAL_BPACKETS] / f.c[ACTIVE_COUNT]
+        f.f[SFLOW_BBYTES] = f.f[TOTAL_BVOLUME] / f.c[ACTIVE_COUNT]
     }
-    f.f[feat["duration"]] = f.getLastTime() - f.firstTime
-    if f.f[feat["duration"]] < 0 {
-        log.Fatalf("duration (%d) < 0", f.f[feat["duration"]])
+    f.f[DURATION] = f.getLastTime() - f.firstTime
+    if f.f[DURATION] < 0 {
+        log.Fatalf("duration (%d) < 0", f.f[DURATION])
     }
 
     fmt.Printf("%s,%d,%s,%d,%d",
@@ -512,14 +512,14 @@ func (f *Flow) Export() {
         f.dstip,
         f.dstport,
         f.proto)
-    for i := 0; i < len(feat)-1; i++ {
+    for i := 0; i < NUM_FEATURES-1; i++ {
         fmt.Printf(",%d", f.f[i])
     }
     fmt.Printf(",%s", f.bins["fpktl"].Export())
     fmt.Printf(",%s", f.bins["bpktl"].Export())
     fmt.Printf(",%s", f.bins["fiat"].Export())
     fmt.Printf(",%s", f.bins["biat"].Export())
-    fmt.Printf(",%d", f.f[len(feat)-1])
+    fmt.Printf(",%d", f.f[NUM_FEATURES-1])
     fmt.Println()
 }
 
