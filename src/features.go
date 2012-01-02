@@ -21,42 +21,27 @@ package main
 
 import (
     "fmt"
-    "math"
     vector "container/vector"
 )
 
-func stddev(sqsum int64, sum int64, count int64) int64 {
-    return int64(math.Sqrt(float64(
-        (sqsum - (sum*sum)/count) / (count - 1))))
-}
-
-func Min64(i1 int64, i2 int64) int64 {
-    if i1 < i2 {
-        return i1
-    }
-    return i2
-}
-
-func MinInt(i1 int, i2 int) int {
-    if i1 < i2 {
-        return i1
-    }
-    return i2
-}
-
+// Defines the minimum set of functions needed for a Feature.
 type Feature interface {
-    Add(int64)
-    Export() string
-    Set(int64)
+    Add(int64)      // Add a particular value to a feature
+    Export() string // Export the contents of a feature in string form
+    Set(int64)      // Reset the feature to a particular value
 }
 
+// A feature which takes values and bins them according to their value.
 type BinFeature struct {
-    num_bins int // The number of bins for this feature
-    bin_sep  int // The separator for each bin. Ie. the magnitude of the range
-    // of each bin
-    bins vector.IntVector // The actual values of each bin.
+    num_bins int              // The number of bins for this feature
+    bin_sep  int              // Ie. the magnitude of the range contained in each bin
+    bins     vector.IntVector // Stores the actual count for each bin
 }
 
+// Initializes the BinFeature to contain bins starting at min and going to max.
+// Anything below min is thrown into the lowest bin, and anything above max is
+// put in the last bin. num_bins is the number of bins required in the range
+// [min, max]
 func (f *BinFeature) Init(min int, max int, num_bins int) {
     f.num_bins = num_bins - 1
     diff := max - min
@@ -90,7 +75,7 @@ func (f *BinFeature) Set(val int64) {
     }
 }
 
-type DistFeature struct {
+type DistributionFeature struct {
     sum   int64
     sumsq int64
     count int64
@@ -98,11 +83,11 @@ type DistFeature struct {
     max   int64
 }
 
-func (f *DistFeature) Init(val int64) {
+func (f *DistributionFeature) Init(val int64) {
     f.Set(val)
 }
 
-func (f *DistFeature) Add(val int64) {
+func (f *DistributionFeature) Add(val int64) {
     f.sum += val
     f.sumsq += val * val
     f.count++
@@ -114,13 +99,13 @@ func (f *DistFeature) Add(val int64) {
     }
 }
 
-func (f *DistFeature) Export() string {
+func (f *DistributionFeature) Export() string {
     return fmt.Sprintf("%d,%d,%d,%d", f.min, f.sum/f.count, f.max,
         stddev(f.sumsq, f.sum, f.count))
 }
 
-// Set the DistFeature to include val as the single value in the Feature.
-func (f *DistFeature) Set(val int64) {
+// Set the DistributionFeature to include val as the single value in the Feature.
+func (f *DistributionFeature) Set(val int64) {
     f.sum = val
     f.sumsq = val * val
     f.count = 1

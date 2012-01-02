@@ -34,8 +34,8 @@ const (
     TAB       = "\t"
     COPYRIGHT = "Copyright (C) 2010 Daniel Arndt\n" +
         "Licensed under the Apache License, Version 2.0 (the \"License\"); " +
-        "you may not use this file except in compliance with the License." +
-        " You may obtain a copy of the License at\n" +
+        "you may not use this file except in compliance with the License. " +
+        "You may obtain a copy of the License at\n" +
         "\n    http://www.apache.org/licenses/LICENSE-2.0\n" +
         "\nFor more information, please visit: \n" +
         "http://web.cs.dal.ca/~darndt/projects/flowtbag"

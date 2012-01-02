@@ -6,5 +6,6 @@ GOFILES=\
 	src/flow.go\
 	src/tcpState.go\
 	src/features.go\
+	src/misc.go\
 
 include $(GOROOT)/src/Make.cmd

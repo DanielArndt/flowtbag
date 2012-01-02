@@ -43,7 +43,7 @@ const (
 // string value for it's name to the value
 type packet map[string]int64
 
-const ( 
+const (
     // To add new features, add the name here, then inititialize the
     // value in init(), and calculate it in add(). You can finalize it
     // in Export()
