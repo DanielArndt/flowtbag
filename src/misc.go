@@ -24,9 +24,13 @@ import (
 )
 
 // Calculates the standard deviation of a feature.
-func stddev(sqsum int64, sum int64, count int64) int64 {
-    return int64(math.Sqrt(float64(
-        (sqsum - (sum*sum)/count) / (count - 1))))
+func stddev(sqsum float64, sum float64, count int64) float64 {
+    if count < 2 {
+        return 0
+    }
+    n := float64(count)
+    stddev := math.Sqrt((sqsum - (sum * sum / n)) / (n - 1))
+    return stddev
 }
 
 // Returns the minimum of two int64

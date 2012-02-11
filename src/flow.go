@@ -30,6 +30,10 @@ const (
 
     P_FORWARD  = 0
     P_BACKWARD = 1
+
+    ADD_SUCCESS = 0
+    ADD_CLOSED  = 1
+    ADD_IDLE    = 2
 )
 
 const (
@@ -51,31 +55,13 @@ const (
     TOTAL_FVOLUME
     TOTAL_BPACKETS
     TOTAL_BVOLUME
-    MIN_FPKTL
-    MEAN_FPKTL
-    MAX_FPKTL
-    STD_FPKTL
-    MIN_BPKTL
-    MEAN_BPKTL
-    MAX_BPKTL
-    STD_BPKTL
-    MIN_FIAT
-    MEAN_FIAT
-    MAX_FIAT
-    STD_FIAT
-    MIN_BIAT
-    MEAN_BIAT
-    MAX_BIAT
-    STD_BIAT
+    FPKTL
+    BPKTL
+    FIAT
+    BIAT
     DURATION
-    MIN_ACTIVE
-    MEAN_ACTIVE
-    MAX_ACTIVE
-    STD_ACTIVE
-    MIN_IDLE
-    MEAN_IDLE
-    MAX_IDLE
-    STD_IDLE
+    ACTIVE
+    IDLE
     SFLOW_FPACKETS
     SFLOW_FBYTES
     SFLOW_BPACKETS
@@ -86,47 +72,28 @@ const (
     BURG_CNT
     TOTAL_FHLEN
     TOTAL_BHLEN
-    DSCP
-    NUM_FEATURES
-)
-
-const (
-    FPKTL_SQSUM = iota
-    BPKTL_SQSUM
-    FIAT_SUM
-    FIAT_SQSUM
-    FIAT_COUNT
-    BIAT_SUM
-    BIAT_SQSUM
-    BIAT_COUNT
-    ACTIVE_START
-    ACTIVE_TIME
-    ACTIVE_SQSUM
-    ACTIVE_COUNT
-    IDLE_TIME
-    IDLE_SQSUM
-    IDLE_COUNT
-    NUM_COUNTERS
+    NUM_FEATURES // Not a real feature. Just the total number of features.
 )
 
 type Flow struct {
-    f    []int64            // A map of the features to be exported
-    c    []int64            // A map of counters used for calculations
-    bins map[string]Feature // A map of binning features
+    f   []Feature // A map of the features to be exported
 
-    valid     bool     // Is the flow a valid, exportable flow or not?
-    firstTime int64    // The time of the first packet in the flow
-    flast     int64    // The time of the last packet in the forward direction
-    blast     int64    // The time of the last packet in the backward direction
-    cstate    tcpState // Connection state of the client
-    sstate    tcpState // Connection state of the server
-    hasData   bool     // Whether the connection has had any data transmitted.
-    pdir      int8     // Direction of the current packet
-    srcip     string   // IP address of the source (client)
-    srcport   uint16   // Port number of the source connection
-    dstip     string   // IP address of the destination (server)
-    dstport   uint16   // Port number of the destionation connection.
-    proto     uint8    // The IP protocol being used for the connection.
+    valid       bool     // Has the flow met the requirements of a bi-directional flow
+    activeStart int64    // The starting time of the latest activity
+    firstTime   int64    // The time of the first packet in the flow
+    flast       int64    // The time of the last packet in the forward direction
+    blast       int64    // The time of the last packet in the backward direction
+    cstate      tcpState // Connection state of the client
+    sstate      tcpState // Connection state of the server
+    hasData     bool     // Whether the connection has had any data transmitted.
+    isBidir     bool     // Is the flow bi-directional?
+    pdir        int8     // Direction of the current packet
+    srcip       string   // IP address of the source (client)
+    srcport     uint16   // Port number of the source connection
+    dstip       string   // IP address of the destination (server)
+    dstport     uint16   // Port number of the destionation connection.
+    proto       uint8    // The IP protocol being used for the connection.
+    dscp        uint8    // The first set DSCP field for the flow.
 }
 
 func (f *Flow) Init(srcip string,
@@ -136,60 +103,59 @@ func (f *Flow) Init(srcip string,
     proto uint8,
     pkt packet,
     id int64) {
-    f.f = make([]int64, NUM_FEATURES)
-    f.c = make([]int64, NUM_COUNTERS)
+    f.f = make([]Feature, NUM_FEATURES)
     f.valid = false
-    for i := 0; i < NUM_FEATURES; i++ {
-        f.f[i] = 0
-    }
-    for i := 0; i < NUM_COUNTERS; i++ {
-        f.c[i] = 0
-    }
+    f.f[TOTAL_FPACKETS] = new(ValueFeature)
+    f.f[TOTAL_FVOLUME] = new(ValueFeature)
+    f.f[TOTAL_BPACKETS] = new(ValueFeature)
+    f.f[TOTAL_BVOLUME] = new(ValueFeature)
+    f.f[FPKTL] = new(DistributionFeature)
+    f.f[BPKTL] = new(DistributionFeature)
+    f.f[FIAT] = new(DistributionFeature)
+    f.f[BIAT] = new(DistributionFeature)
+    f.f[DURATION] = new(ValueFeature)
+    f.f[ACTIVE] = new(DistributionFeature)
+    f.f[IDLE] = new(DistributionFeature)
+    f.f[SFLOW_FPACKETS] = new(ValueFeature)
+    f.f[SFLOW_FBYTES] = new(ValueFeature)
+    f.f[SFLOW_BPACKETS] = new(ValueFeature)
+    f.f[SFLOW_BBYTES] = new(ValueFeature)
+    f.f[FPSH_CNT] = new(ValueFeature)
+    f.f[BPSH_CNT] = new(ValueFeature)
+    f.f[FURG_CNT] = new(ValueFeature)
+    f.f[BURG_CNT] = new(ValueFeature)
+    f.f[TOTAL_FHLEN] = new(ValueFeature)
+    f.f[TOTAL_BHLEN] = new(ValueFeature)
+    //for i := 0; i < NUM_FEATURES; i++ {
+    //    f.f[i].Set(0)
+    //}
     // Basic flow identification criteria
     f.srcip = srcip
     f.srcport = srcport
     f.dstip = dstip
     f.dstport = dstport
     f.proto = proto
-    f.f[DSCP] = pkt["dscp"]
+    f.dscp = uint8(pkt["dscp"])
     // ---------------------------------------------------------
-    f.f[TOTAL_FPACKETS] = 1
+    f.f[TOTAL_FPACKETS].Set(1)
     length := pkt["len"]
-    f.f[TOTAL_FVOLUME] = length
-    f.f[MIN_FPKTL] = length
-    f.f[MAX_FPKTL] = length
-    f.c[FPKTL_SQSUM] = (length * length)
+    f.f[TOTAL_FVOLUME].Set(length)
+    f.f[FPKTL].Add(length)
     f.firstTime = pkt["time"]
     f.flast = f.firstTime
-    f.c[ACTIVE_START] = f.firstTime
+    f.activeStart = f.firstTime
     if f.proto == IP_TCP {
         // TCP specific code:
         f.cstate.State = TCP_STATE_START
         f.sstate.State = TCP_STATE_START
         if tcpSet(TCP_PSH, pkt["flags"]) {
-            f.f[FPSH_CNT] = 1
+            f.f[FPSH_CNT].Set(1)
         }
         if tcpSet(TCP_URG, pkt["flags"]) {
-            f.f[FURG_CNT] = 1
+            f.f[FURG_CNT].Set(1)
         }
     }
-    f.f[TOTAL_FHLEN] = pkt["iphlen"] + pkt["prhlen"]
-
-    f.bins = make(map[string]Feature)
-    var binFeat *BinFeature
-    binFeat = new(BinFeature)
-    binFeat.Init(0, 250, 10)
-    binFeat.Add(length)
-    f.bins["fpktl"] = binFeat
-    binFeat = new(BinFeature)
-    binFeat.Init(0, 250, 10)
-    f.bins["bpktl"] = binFeat
-    binFeat = new(BinFeature)
-    binFeat.Init(0, 200000, 10)
-    f.bins["fiat"] = binFeat
-    binFeat = new(BinFeature)
-    binFeat.Init(0, 200000, 10)
-    f.bins["biat"] = binFeat
+    f.f[TOTAL_FHLEN].Set(pkt["iphlen"] + pkt["prhlen"])
 
     f.hasData = false
     f.pdir = P_FORWARD
@@ -210,7 +176,7 @@ func (f *Flow) updateStatus(pkt packet) {
         if pkt["len"] > 8 {
             f.hasData = true
         }
-        if f.hasData && (f.f[TOTAL_BPACKETS] > 0) {
+        if f.hasData && f.isBidir {
             f.valid = true
         }
     } else if f.proto == IP_TCP {
@@ -243,11 +209,11 @@ func (f *Flow) Add(pkt packet, srcip string) int {
     last := f.getLastTime()
     diff := now - last
     if diff > FLOW_TIMEOUT {
-        return 2
+        return ADD_IDLE
     }
     if now < last {
         log.Printf("Flow: ignoring reordered packet. %d < %d\n", now, last)
-        return 0
+        return ADD_SUCCESS
     }
     length := pkt["len"]
     hlen := pkt["iphlen"] + pkt["prhlen"]
@@ -262,117 +228,70 @@ func (f *Flow) Add(pkt packet, srcip string) int {
         f.pdir = P_BACKWARD
     }
     if diff > IDLE_THRESHOLD {
-        if diff > f.f[MAX_IDLE] {
-            f.f[MAX_IDLE] = diff
-        }
-        if (diff < f.f[MIN_IDLE]) ||
-            (f.f[MIN_IDLE] == 0) {
-            f.f[MIN_IDLE] = diff
-        }
-        f.c[IDLE_TIME] += diff
-        f.c[IDLE_SQSUM] += (diff * diff)
-        f.c[IDLE_COUNT]++
+        f.f[IDLE].Add(diff)
+
         // Active time stats - calculated by looking at the previous packet
         // time and the packet time for when the last idle time ended.
-        diff = last - f.c[ACTIVE_START]
-        if diff > f.f[MAX_ACTIVE] {
-            f.f[MAX_ACTIVE] = diff
-        }
-        if (diff < f.f[MIN_ACTIVE]) ||
-            (f.f[MIN_ACTIVE] == 0) {
-            f.f[MIN_ACTIVE] = diff
-        }
-        f.c[ACTIVE_TIME] += diff
-        f.c[ACTIVE_SQSUM] += (diff * diff)
-        f.c[ACTIVE_COUNT]++
+        diff = last - f.activeStart
+        f.f[ACTIVE].Add(diff)
+
         f.flast = 0
         f.blast = 0
-        f.c[ACTIVE_START] = now
+        f.activeStart = now
     }
     if f.pdir == P_FORWARD {
-        if f.f[DSCP] == 0 {
-            f.f[DSCP] = pkt["dscp"]
+        if f.dscp == 0 {
+            f.dscp = uint8(pkt["dscp"])
         }
         // Packet is travelling in the forward direction
         // Calculate some statistics
         // Packet length
-        if (length < f.f[MIN_FPKTL]) || (f.f[MIN_FPKTL] == 0) {
-            f.f[MIN_FPKTL] = length
-        }
-        if length > f.f[MAX_FPKTL] {
-            f.f[MAX_FPKTL] = length
-        }
-        f.f[TOTAL_FVOLUME] += length // Doubles up as c_fpktl_sum from NM
-        f.c[FPKTL_SQSUM] += (length * length)
-        f.f[TOTAL_FPACKETS]++
-        f.f[TOTAL_FHLEN] += hlen
+        f.f[FPKTL].Add(length)
+        f.f[TOTAL_FVOLUME].Add(length)
+        f.f[TOTAL_FPACKETS].Add(1)
+        f.f[TOTAL_FHLEN].Add(hlen)
         // Interarrival time
         if f.flast > 0 {
             diff = now - f.flast
-            if (diff < f.f[MIN_FIAT]) || (f.f[MIN_FIAT] == 0) {
-                f.f[MIN_FIAT] = diff
-            }
-            if diff > f.f[MAX_FIAT] {
-                f.f[MAX_FIAT] = diff
-            }
-            f.c[FIAT_SUM] += diff
-            f.c[FIAT_SQSUM] += (diff * diff)
-            f.c[FIAT_COUNT]++
-            f.bins["fiat"].Add(diff)
+            f.f[FIAT].Add(diff)
         }
         if f.proto == IP_TCP {
             // Packet is using TCP protocol
             if tcpSet(TCP_PSH, pkt["flags"]) {
-                f.f[FPSH_CNT]++
+                f.f[FPSH_CNT].Add(1)
             }
             if tcpSet(TCP_URG, pkt["flags"]) {
-                f.f[FURG_CNT]++
+                f.f[FURG_CNT].Add(1)
             }
             // Update the last forward packet time stamp
         }
-        f.bins["fpktl"].Add(length)
         f.flast = now
     } else {
         // Packet is travelling in the backward direction
-        if f.f[DSCP] == 0 {
-            f.f[DSCP] = pkt["dscp"]
+        f.isBidir = true
+        if f.dscp == 0 {
+            f.dscp = uint8(pkt["dscp"])
         }
         // Calculate some statistics
         // Packet length
-        if length < f.f[MIN_BPKTL] || f.f[MIN_BPKTL] == 0 {
-            f.f[MIN_BPKTL] = length
-        }
-        if length > f.f[MAX_BPKTL] {
-            f.f[MAX_BPKTL] = length
-        }
-        f.f[TOTAL_BVOLUME] += length // Doubles up as c_bpktl_sum from NM
-        f.c[BPKTL_SQSUM] += (length * length)
-        f.f[TOTAL_BPACKETS]++
-        f.f[TOTAL_BHLEN] += hlen
+        f.f[BPKTL].Add(length)
+        f.f[TOTAL_BVOLUME].Add(length) // Doubles up as c_bpktl_sum from NM
+        f.f[TOTAL_BPACKETS].Add(1)
+        f.f[TOTAL_BHLEN].Add(hlen)
         // Inter-arrival time
         if f.blast > 0 {
             diff = now - f.blast
-            if (diff < f.f[MIN_BIAT]) || (f.f[MIN_BIAT] == 0) {
-                f.f[MIN_BIAT] = diff
-            }
-            if diff > f.f[MAX_BIAT] {
-                f.f[MAX_BIAT] = diff
-            }
-            f.c[BIAT_SUM] += diff
-            f.c[BIAT_SQSUM] += (diff * diff)
-            f.c[BIAT_COUNT]++
-            f.bins["biat"].Add(diff)
+            f.f[BIAT].Add(diff)
         }
         if f.proto == IP_TCP {
             // Packet is using TCP protocol
             if tcpSet(TCP_PSH, pkt["flags"]) {
-                f.f[BPSH_CNT]++
+                f.f[BPSH_CNT].Add(1)
             }
             if tcpSet(TCP_URG, pkt["flags"]) {
-                f.f[BURG_CNT]++
+                f.f[BURG_CNT].Add(1)
             }
         }
-        f.bins["bpktl"].Add(length)
         // Update the last backward packet time stamp
         f.blast = now
     }
@@ -383,9 +302,9 @@ func (f *Flow) Add(pkt packet, srcip string) int {
     if f.proto == IP_TCP &&
         f.cstate.State == TCP_STATE_CLOSED &&
         f.sstate.State == TCP_STATE_CLOSED {
-        return 1
+        return ADD_CLOSED
     }
-    return 0
+    return ADD_SUCCESS
 }
 
 func (f *Flow) Export() {
@@ -397,112 +316,22 @@ func (f *Flow) Export() {
     // First, lets consider the last active time in the calculations in case
     // this changes something.
     // -----------------------------------
-    diff := f.getLastTime() - f.c[ACTIVE_START]
-    if diff > f.f[MAX_ACTIVE] {
-        f.f[MAX_ACTIVE] = diff
-    }
-    if (diff < f.f[MIN_ACTIVE]) || (f.f[MIN_ACTIVE] == 0) {
-        f.f[MIN_ACTIVE] = diff
-    }
-    f.c[ACTIVE_TIME] += diff
-    f.c[ACTIVE_SQSUM] += (diff * diff)
-    f.c[ACTIVE_COUNT]++
-
-    if f.f[TOTAL_FPACKETS] <= 0 {
-        log.Fatalf("total_fpackets (%d) <= 0\n", f.f[TOTAL_FPACKETS])
-    }
+    diff := f.getLastTime() - f.activeStart
+    f.f[ACTIVE].Add(diff)
 
     // ---------------------------------
     // Update Flow stats which require counters or other final calculations
     // ---------------------------------
-    f.f[MEAN_FPKTL] = f.f[TOTAL_FVOLUME] / f.f[TOTAL_FPACKETS]
-    //Standard deviation of packets in the forward direction
-    if f.f[TOTAL_FPACKETS] > 1 {
-        f.f[STD_FPKTL] = stddev(f.c[FPKTL_SQSUM], f.f[TOTAL_FVOLUME], f.f[TOTAL_FPACKETS])
-    } else {
-        f.f[STD_FPKTL] = 0
-    }
-    // Mean packet length of packets in the packward direction
-    if f.f[TOTAL_BPACKETS] > 0 {
-        f.f[MEAN_BPKTL] = f.f[TOTAL_BVOLUME] / f.f[TOTAL_BPACKETS]
-    } else {
-        f.f[MEAN_BPKTL] = -1
-    }
-    // Standard deviation of packets in the backward direction
-    if f.f[TOTAL_BPACKETS] > 1 {
-        f.f[STD_BPKTL] = stddev(f.c[BPKTL_SQSUM],
-            f.f[TOTAL_BVOLUME],
-            f.f[TOTAL_BPACKETS])
-    } else {
-        f.f[STD_BPKTL] = 0
-    }
-    // Mean forward inter-arrival time
-    // TODO: Check if we actually need c_fiat_count ?
-    if f.c[FIAT_COUNT] > 0 {
-        f.f[MEAN_FIAT] = f.c[FIAT_SUM] / f.c[FIAT_COUNT]
-    } else {
-        f.f[MEAN_FIAT] = 0
-    }
-    // Standard deviation of forward inter-arrival times
-    if f.c[FIAT_COUNT] > 1 {
-        f.f[STD_FIAT] = stddev(f.c[FIAT_SQSUM],
-            f.c[FIAT_SUM],
-            f.c[FIAT_COUNT])
-    } else {
-        f.f[STD_FIAT] = 0
-    }
-    // Mean backward inter-arrival time
-    if f.c[BIAT_COUNT] > 0 {
-        f.f[MEAN_BIAT] = f.c[BIAT_SUM] / f.c[BIAT_COUNT]
-    } else {
-        f.f[MEAN_BIAT] = 0
-    }
-    // Standard deviation of backward inter-arrival times
-    if f.c[BIAT_COUNT] > 1 {
-        f.f[STD_BIAT] = stddev(f.c[BIAT_SQSUM],
-            f.c[BIAT_SUM],
-            f.c[BIAT_COUNT])
-    } else {
-        f.f[STD_BIAT] = 0
-    }
-    // Mean active time of the sub-flows
-    if f.c[ACTIVE_COUNT] > 0 {
-        f.f[MEAN_ACTIVE] = f.c[ACTIVE_TIME] / f.c[ACTIVE_COUNT]
-    } else {
-        // There should be packets in each direction if we're exporting 
-        log.Fatalln("ERR: This shouldn't happen")
-    }
-    // Standard deviation of active times of sub-flows
-    if f.c[ACTIVE_COUNT] > 1 {
-        f.f[STD_ACTIVE] = stddev(f.c[ACTIVE_SQSUM],
-            f.c[ACTIVE_TIME],
-            f.c[ACTIVE_COUNT])
-    } else {
-        f.f[STD_ACTIVE] = 0
-    }
-    // Mean of idle times between sub-flows
-    if f.c[IDLE_COUNT] > 0 {
-        f.f[MEAN_IDLE] = f.c[IDLE_TIME] / f.c[IDLE_COUNT]
-    } else {
-        f.f[MEAN_IDLE] = 0
-    }
-    // Standard deviation of idle times between sub-flows
-    if f.c[IDLE_COUNT] > 1 {
-        f.f[STD_IDLE] = stddev(f.c[IDLE_SQSUM],
-            f.c[IDLE_TIME],
-            f.c[IDLE_COUNT])
-    } else {
-        f.f[STD_IDLE] = 0
-    }
+
     // More sub-flow calculations
-    if f.c[ACTIVE_COUNT] > 0 {
-        f.f[SFLOW_FPACKETS] = f.f[TOTAL_FPACKETS] / f.c[ACTIVE_COUNT]
-        f.f[SFLOW_FBYTES] = f.f[TOTAL_FVOLUME] / f.c[ACTIVE_COUNT]
-        f.f[SFLOW_BPACKETS] = f.f[TOTAL_BPACKETS] / f.c[ACTIVE_COUNT]
-        f.f[SFLOW_BBYTES] = f.f[TOTAL_BVOLUME] / f.c[ACTIVE_COUNT]
+    if f.f[ACTIVE].Get() > 0 {
+        f.f[SFLOW_FPACKETS].Set(f.f[TOTAL_FPACKETS].Get() / f.f[ACTIVE].Get())
+        f.f[SFLOW_FBYTES].Set(f.f[TOTAL_FVOLUME].Get() / f.f[ACTIVE].Get())
+        f.f[SFLOW_BPACKETS].Set(f.f[TOTAL_BPACKETS].Get() / f.f[ACTIVE].Get())
+        f.f[SFLOW_BBYTES].Set(f.f[TOTAL_BVOLUME].Get() / f.f[ACTIVE].Get())
     }
-    f.f[DURATION] = f.getLastTime() - f.firstTime
-    if f.f[DURATION] < 0 {
+    f.f[DURATION].Set(f.getLastTime() - f.firstTime)
+    if f.f[DURATION].Get() < 0 {
         log.Fatalf("duration (%d) < 0", f.f[DURATION])
     }
 
@@ -512,14 +341,10 @@ func (f *Flow) Export() {
         f.dstip,
         f.dstport,
         f.proto)
-    for i := 0; i < NUM_FEATURES-1; i++ {
-        fmt.Printf(",%d", f.f[i])
+    for i := 0; i < NUM_FEATURES; i++ {
+        fmt.Printf(",%s", f.f[i].Export())
     }
-    fmt.Printf(",%s", f.bins["fpktl"].Export())
-    fmt.Printf(",%s", f.bins["bpktl"].Export())
-    fmt.Printf(",%s", f.bins["fiat"].Export())
-    fmt.Printf(",%s", f.bins["biat"].Export())
-    fmt.Printf(",%d", f.f[NUM_FEATURES-1])
+    fmt.Printf(",%d", f.dscp)
     fmt.Println()
 }
 

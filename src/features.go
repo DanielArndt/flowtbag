@@ -28,7 +28,8 @@ import (
 type Feature interface {
     Add(int64)      // Add a particular value to a feature
     Export() string // Export the contents of a feature in string form
-    Set(int64)      // Reset the feature to a particular value
+    Get() int64
+    Set(int64) // Reset the feature to a particular value
 }
 
 // A feature which takes values and bins them according to their value.
@@ -69,6 +70,10 @@ func (f *BinFeature) Export() string {
     return ret
 }
 
+func (f *BinFeature) Get() int64 {
+    return int64(f.bins[0])
+}
+
 func (f *BinFeature) Set(val int64) {
     for i := 0; i < len(f.bins); i++ {
         f.bins[i] = int(val)
@@ -91,7 +96,7 @@ func (f *DistributionFeature) Add(val int64) {
     f.sum += val
     f.sumsq += val * val
     f.count++
-    if val < f.min {
+    if (val < f.min) || (f.min == 0) {
         f.min = val
     }
     if val > f.max {
@@ -100,15 +105,26 @@ func (f *DistributionFeature) Add(val int64) {
 }
 
 func (f *DistributionFeature) Export() string {
-    return fmt.Sprintf("%d,%d,%d,%d", f.min, f.sum/f.count, f.max,
-        stddev(f.sumsq, f.sum, f.count))
+    var (
+        stdDev int64 = 0
+        mean   int64 = 0
+    )
+    if f.count > 0 {
+        stdDev = int64(stddev(float64(f.sumsq), float64(f.sum), f.count))
+        mean = f.sum / f.count
+    }
+    return fmt.Sprintf("%d,%d,%d,%d", f.min, mean, f.max, stdDev)
+}
+
+func (f *DistributionFeature) Get() int64 {
+    return f.count
 }
 
 // Set the DistributionFeature to include val as the single value in the Feature.
 func (f *DistributionFeature) Set(val int64) {
     f.sum = val
     f.sumsq = val * val
-    f.count = 1
+    f.count = val
     f.min = val
     f.max = val
 }
@@ -126,7 +142,11 @@ func (f *ValueFeature) Add(val int64) {
 }
 
 func (f *ValueFeature) Export() string {
-    return string(f.value)
+    return fmt.Sprintf("%d", f.value)
+}
+
+func (f *ValueFeature) Get() int64 {
+    return f.value
 }
 
 func (f *ValueFeature) Set(val int64) {

@@ -41,11 +41,11 @@ const (
         "http://web.cs.dal.ca/~darndt/projects/flowtbag"
 )
 
-func sortIP(ip1 string, port1 uint16, ip2 string, port2 uint16) string {
+func stringTuple(ip1 string, port1 uint16, ip2 string, port2 uint16, proto uint8) string {
     if ip1 > ip2 {
-        return fmt.Sprintf("%s,%d,%s,%d", ip1, port1, ip2, port2)
+        return fmt.Sprintf("%s,%d,%s,%d,%d", ip1, port1, ip2, port2, proto)
     }
-    return fmt.Sprintf("%s,%d,%s,%d", ip2, port2, ip1, port1)
+    return fmt.Sprintf("%s,%d,%s,%d,%d", ip2, port2, ip1, port1, proto)
 }
 
 // Display a welcome message
@@ -123,11 +123,23 @@ var (
     activeFlows map[string]*Flow = make(map[string]*Flow)
 )
 
-/* This should probably be more informative and actually do something. But for
- * now it will just catch the panic and recover from it. This is useful for
- * packets which are not valid. */
+func printStackTrace() {
+    n := 1
+    for {
+        p, f, l, ok := runtime.Caller(n)
+        if !ok {
+            break
+        }
+        log.Printf("%s (%s:%d)\n", runtime.FuncForPC(p).Name(), f, l)
+        n++
+    }
+}
+
 func catchPanic() {
-    recover()
+    if err := recover(); err != nil {
+        log.Printf("Error processing packet %d: %s", pCount, err)
+        printStackTrace()
+    }
 }
 
 func process(raw *pcap.Packet) {
@@ -180,14 +192,14 @@ func process(raw *pcap.Packet) {
         log.Fatal("Not TCP or UDP. Packet should not have made it this far.")
     }
     pkt["time"] = int64(raw.Time.Sec)*1000000 + int64(raw.Time.Usec)
-    ts := sortIP(srcip, srcport, dstip, dstport)
+    ts := stringTuple(srcip, srcport, dstip, dstport, proto)
     flow, exists := activeFlows[ts]
     if exists {
         return_val := flow.Add(pkt, srcip)
-        if return_val == 0 {
+        if return_val == ADD_SUCCESS {
             // The flow was successfully added
             return
-        } else if return_val == 1 {
+        } else if return_val == ADD_CLOSED {
             flow.Export()
             activeFlows[ts] = nil, false
             return
@@ -206,6 +218,7 @@ func process(raw *pcap.Packet) {
         f := new(Flow)
         f.Init(srcip, srcport, dstip, dstport, proto, pkt, flowCount)
         activeFlows[ts] = f
+
         return
     }
 }
