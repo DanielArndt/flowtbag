@@ -17,7 +17,7 @@
  *
  */
 
-package flowtbag
+package main
 
 const (
 	TCP_FIN = 0x01

@@ -17,7 +17,7 @@
  *
  */
 
-package flowtbag
+package main
 
 import (
 	"math"
