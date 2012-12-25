@@ -15,7 +15,7 @@
    limitations under the License.
 
    Author: 
-       Daniel Arndt <danielarndt@gmail.com> (http://web.cs.dal.ca/~darndt/)
+       Daniel Arndt <danielarndt@gmail.com> (http://dan.arndt.ca)
 
 2. Purpose----------------------------------------------------------------------
 
@@ -46,15 +46,15 @@
          apt-get install libpcap-dev
 
       Other distributions will likely have a similar package name. It is
-	  important that if you are compiling the program from source, you install
-	  the developement headers.
+      important that if you are compiling the program from source, you install
+      the developement headers.
 
    gopcap:
 
-      To install gopcap, you can use goinstall. The following code should be
-	  sufficient if you have Go installed correctly:
+      To install gopcap, you can use the get command. The following code should be
+      sufficient if you have Go installed correctly:
 
-         goinstall github.com/akrennmair/gopcap
+         go get -u github.com/akrennmair/gopcap
 
 4. Compilation------------------------------------------------------------------
 
