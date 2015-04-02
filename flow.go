@@ -48,7 +48,7 @@ const (
 type packet map[string]int64
 
 const (
-	// To add new features, add the name here, then inititialize the
+	// To add new features, add the name here, then initialize the
 	// value in init(), and calculate it in add(). You can finalize it
 	// in Export()
 	TOTAL_FPACKETS = iota
