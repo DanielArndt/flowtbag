@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2011 Daniel Arndt
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,11 +22,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gopcap"
 	"log"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/akrennmair/gopcap"
 )
 
 // Create some constants
