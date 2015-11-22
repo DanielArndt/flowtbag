@@ -49,19 +49,12 @@ Other distributions will likely have a similar package name. It is
 important that if you are compiling the program from source, you install
 the developement headers.
 
-### gopcap:
-
-To install gopcap, you can use the get command. The following code should be
-sufficient if you have Go installed correctly:
-
-    go get -u github.com/akrennmair/gopcap
-
 ## Compilation
 
-If all the dependancies are properly installed, it should be sufficient to 
-execute the Makefile:
+Once libpcap is installed, `go` will install the necessary go dependencies. Just
+build and install using go.
 
-    make
+   go get github.com/danielarndt/flowtbag
 
 ## Usage
 
